@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { LineFeature } from "./types/features";
 import { sleep } from "bun";
-import { getRoutes } from "./getRoutes";
+import { getRoutes } from "./requests/getRoutes";
 import { sql } from './db'
 import { busLineFeatures } from "./osm/getAllOsmLines";
 import { addLineStops } from "./addLineStops";

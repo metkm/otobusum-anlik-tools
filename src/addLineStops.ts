@@ -1,6 +1,6 @@
 import { sleep } from "bun";
 import { sql } from "./db";
-import { getStops } from "./getStops";
+import { getStops } from "./requests/getStops";
 import { Line } from "./types/line";
 
 export const addLineStops = async () => {

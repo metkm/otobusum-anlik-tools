@@ -51,3 +51,22 @@ const getBusLocations = async () => {
   const responseParsed = JSON.parse(innerContent)
   return responseParsed
 };
+
+const getTest = async () => {
+  const key = 'GetGuzergahLine_json'
+  const body = getBody('HatKodu', key, 'KM12')
+
+  const response = await fetch("https://api.ibb.gov.tr/iett/UlasimAnaVeri/HatDurakGuzergah.asmx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/xml; charset=UTF-8",
+      SOAPAction: `"http://tempuri.org/${key}"`,
+    },
+    body,
+  });
+
+  const content = await response.text()
+  console.log(content)
+}
+
+getTest()

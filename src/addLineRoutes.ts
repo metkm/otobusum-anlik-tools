@@ -1,6 +1,6 @@
 import { sleep } from "bun";
 import { sql } from "./db";
-import { getRoutes } from "./getRoutes";
+import { getRoutes } from "./requests/getRoutes";
 import { Line } from "./types/line";
 
 export const addLineRoutes = async () => {
