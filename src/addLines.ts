@@ -12,7 +12,7 @@ interface Line {
 export const addLines = async () => {
   // const routeLine = routesText.split('\n')
   const linesInDb = await sql`SELECT code FROM lines`;
-  console.log('got', linesInDb.count, 'from db')
+  console.log('got', linesInDb.count, 'lines from db')
 
   const routeLines: Line[] = []
   const addedLines = new Set(linesInDb.map(x => x.code))
