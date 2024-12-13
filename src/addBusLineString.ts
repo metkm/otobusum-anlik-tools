@@ -16,9 +16,15 @@ export const addBusLineString = async () => {
     console.log("getting route line for", routeCode);
     try {
       const routeLine = await getRouteString(routeCode);
+      const firstRoute = routeLine.at(0)
 
-      const parts = routeLine.at(0)?.line.split("|");
-      if (!parts) {
+      if (!firstRoute?.line) {
+        console.log('no line found for', routeCode)
+        continue
+      }
+
+      const parts = firstRoute?.line.split("|");
+      if (!parts || parts.length < 1) {
         console.log("no parts, sleeping for 2 seconds");
         await sleep(4000);
         continue;
