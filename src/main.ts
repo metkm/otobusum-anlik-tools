@@ -3,6 +3,7 @@ import { addLines } from "./addLines";
 import { addLineStops } from "./addLineStops";
 import { getCredentials } from "./requests/getCredentials";
 import { addLineRoutes } from "./addLineRoutes";
+import { addBusLineString } from "./addBusLineString";
 
 console.log('gettings credentials')
 await getCredentials()
@@ -15,3 +16,6 @@ await addLineRoutes()
 
 console.log('adding line stops')
 await addLineStops()
+
+console.log('adding bus lines')
+await addBusLineString()
