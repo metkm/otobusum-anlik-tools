@@ -4,7 +4,7 @@ import { getRouteString } from "./requests/getRouteString";
 
 // check for line swith one way only. eg
 // KM41
-export const addBusLineString = async () => {
+export const addBusRouteLineStrings = async () => {
   const linesRoutes =
     await sql`SELECT * FROM routes WHERE route_code LIKE '%_D0' AND route_code NOT IN (SELECT route_code FROM route_paths)`;
   const routeCodes = linesRoutes.map((x) => x.route_code);
@@ -73,5 +73,5 @@ export const addBusLineString = async () => {
 };
 
 if (import.meta.main) {
-  addBusLineString();
+  addBusRouteLineStrings();
 }
