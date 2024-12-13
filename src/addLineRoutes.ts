@@ -25,12 +25,12 @@ export const addLineRoutes = async () => {
     }));
 
     if (routes.length < 1) {
-      console.log("no routes found for", line.code);
+      console.log("no routes found for line", line.code);
       continue;
     }
 
     try {
-      console.log('inserting routes', line.code)
+      console.log('inserting routes for line', line.code)
       await sql`INSERT INTO routes ${sql(routes)}`;
     } catch (error) {
       console.error(error)

@@ -8,14 +8,14 @@ import { addBusLineString } from "./addBusLineString";
 console.log('gettings credentials')
 await getCredentials()
 
-console.log('addings lines')
-await addLines()
+// console.log('addings lines')
+// await addLines()
 
-console.log('adding line routes')
-await addLineRoutes()
+// console.log('adding line routes')
+// await addLineRoutes()
 
-console.log('adding line stops')
-await addLineStops()
+// console.log('adding line stops')
+// await addLineStops()
 
 console.log('adding bus lines')
 await addBusLineString()

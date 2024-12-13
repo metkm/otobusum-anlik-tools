@@ -1,3 +1,5 @@
+import { authHeaders } from "./getCredentials"
+
 interface Route {
   GUZERGAH_DEPAR_NO: number
   GUZERGAH_GUZERGAH_ADI: string
@@ -22,11 +24,7 @@ export const getRoutes = async (lineCode: string) => {
   const response = await fetch("https://ntcapi.iett.istanbul/service", {
     method: "POST",
     body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json; charset=UTF-8",
-      Authorization:
-        `Bearer ${process.env.BEARER}`,
-    },
+    headers: authHeaders
   });
 
   const parsed: Route[] = await response.json();

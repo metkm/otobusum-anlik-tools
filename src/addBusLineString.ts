@@ -39,9 +39,14 @@ export const addBusLineString = async () => {
     )
       .flat()
 
-    const toInsert  = `[${parsed.map(loc => `(${loc.lng},${loc.lat})`)}]`
+    const toInsert = {
+      route_code: routeCode,
+      route_path: parsed
+    }
+
+    // const toInsert  = `[${parsed.map(loc => `(${loc.lng},${loc.lat})`)}]`
     console.log('inserting', parsed.length, 'line points')
-    await sql`INSERT INTO route_paths VALUES (${routeCode}, ${toInsert})`
+    await sql`INSERT INTO route_paths ${sql(toInsert)} ON CONFLICT (route_code) DO UPDATE SET ${sql(toInsert)}`
 
     console.log('sleeping for 2 seconds')
     await sleep(4000)
