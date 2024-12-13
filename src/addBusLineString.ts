@@ -3,53 +3,64 @@ import { sql } from "./db";
 import { getRouteString } from "./requests/getRouteString";
 
 export const addBusLineString = async () => {
-  const linesRoutes = await sql`SELECT * FROM routes WHERE route_code LIKE '%_D0'`;
+  const linesRoutes =
+    await sql`SELECT * FROM routes WHERE route_code LIKE '%_D0' AND route_code NOT IN (SELECT route_code FROM route_paths)`;
   const routeCodes = linesRoutes.map((x) => x.route_code);
 
-  console.log('starting got', routeCodes.length, 'routeCodes')
+  console.log("starting got", routeCodes.length, "routeCodes");
   for (let index = 0; index < routeCodes.length; index++) {
     const routeCode = routeCodes[index];
 
-    console.log('getting route line for', routeCode)
-    const routeLine = await getRouteString(routeCode);
+    console.log("getting route line for", routeCode);
+    try {
+      const routeLine = await getRouteString(routeCode);
 
-    const parts = routeLine.at(0)?.line.split('|')
-    if (!parts) {
-      console.log('no parts, sleeping for 2 seconds')
-      await sleep(4000)
-      continue
-    }
+      const parts = routeLine.at(0)?.line.split("|");
+      if (!parts) {
+        console.log("no parts, sleeping for 2 seconds");
+        await sleep(4000);
+        continue;
+      }
 
-    console.log('parsing route lines', routeCode)
-    const parsed = parts.map(
-      part => {
-        const inner = part.split('(')[1].split(')')[0].trim()
-        const numbers = inner.split(',')
-        
-        return numbers.map(
-          nums => {
-            const [left, right] = nums.trim().split(' ')
+      console.log("parsing route lines", routeCode);
+      const parsed = parts
+        .map((part) => {
+          const inner = part.split("(")[1].split(")")[0].trim();
+          const numbers = inner.split(",");
+
+          return numbers.map((nums) => {
+            const [left, right] = nums.trim().split(" ");
             return {
               lng: parseFloat(left), // x
-              lat: parseFloat(right) // y
-            }
-          }
-        )
+              lat: parseFloat(right), // y
+            };
+          });
+        })
+        .flat();
+
+      const toInsert = {
+        route_code: routeCode,
+        route_path: parsed,
+      };
+
+      // const toInsert  = `[${parsed.map(loc => `(${loc.lng},${loc.lat})`)}]`
+      console.log("inserting", parsed.length, "line points");
+      await sql`INSERT INTO route_paths ${sql(
+        toInsert
+      )} ON CONFLICT (route_code) DO UPDATE SET ${sql(toInsert)}`;
+
+      console.log("sleeping for 4 seconds");
+      await sleep(4000);
+    } catch (error) {
+      console.error('skipping because of error', error, routeCode);
+      
+      if ((error.message as string).includes('parse JSON')) {
+        console.log('deleting', routeCode)
+        await sql`DELETE FROM routes WHERE route_code = ${routeCode}`
       }
-    )
-      .flat()
 
-    const toInsert = {
-      route_code: routeCode,
-      route_path: parsed
+      await sleep(4000);
     }
-
-    // const toInsert  = `[${parsed.map(loc => `(${loc.lng},${loc.lat})`)}]`
-    console.log('inserting', parsed.length, 'line points')
-    await sql`INSERT INTO route_paths ${sql(toInsert)} ON CONFLICT (route_code) DO UPDATE SET ${sql(toInsert)}`
-
-    console.log('sleeping for 2 seconds')
-    await sleep(4000)
   }
 };
 

@@ -25,7 +25,8 @@ export const addLineRoutes = async () => {
     }));
 
     if (routes.length < 1) {
-      console.log("no routes found for line", line.code);
+      console.log("no routes found for line. Deleting", line.code);
+      await sql`DELETE FROM lines WHERE = ${line.code}`
       continue;
     }
 
