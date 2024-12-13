@@ -1,24 +1,23 @@
 import { sleep } from "bun";
 import { sql } from "./db";
 import { getStops } from "./requests/getStops";
-import { Line } from "./types/line";
 
 export const addLineStops = async () => {
-  const results: Line[] =
+  const results =
     await sql`SELECT * FROM lines WHERE code NOT IN (SELECT line_code FROM line_stops)`;
+
+  console.log('found', results.count, 'lines without any stops.')
 
   for (let index = 0; index < results.length; index++) {
     const line = results[index];
-    console.log("line", line, `${index}/${results.length}`);
+    console.log("line", line.code, `${index}/${results.length}`);
 
-    console.log("getting all stops", line.code);
+    console.log("getting all stops for", line.code);
     const stops = await getStops(line.code);
     
     if (stops.length < 1) {
       console.log('no stops found for', line.code, 'skipping and deleting')
-      
       await sql`DELETE FROM lines WHERE code = ${line.code}`
-
       await sleep(3000)
       continue
     }
@@ -39,7 +38,7 @@ export const addLineStops = async () => {
 
     try {
       console.log("inserting stops");
-      await sql`INSERT INTO stops ${sql(stopsParsed)}`;
+      await sql`INSERT INTO stops ${sql(stopsParsed)} ON CONFLICT (stop_code) DO NOTHING`;
     } catch (error) {
       console.error(error);
     }

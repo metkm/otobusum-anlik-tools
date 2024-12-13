@@ -1,3 +1,5 @@
+import { authHeaders } from "./getCredentials";
+
 export interface Stop {
   DURAK_ADI: string;
   DURAK_DURAK_KISA_ADI: string;
@@ -31,10 +33,7 @@ export const getStops = async (lineCode: string) => {
   const response = await fetch("https://ntcapi.iett.istanbul/service", {
     method: "POST",
     body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json; charset=UTF-8",
-      Authorization: `Bearer ${process.env.BEARER}`,
-    },
+    headers: authHeaders
   });
 
   const parsed: Stop[] = await response.json();

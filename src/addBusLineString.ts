@@ -48,21 +48,6 @@ export const addBusLineString = async () => {
   }
 };
 
-export const getBusLineString = async (routeCode: string) => {
-  const results = await sql`  SELECT json_agg(json_build_object('lat', point[1], 'lng', point[0])) AS points
-  FROM (
-    SELECT 
-      (ST_DumpPoints(linestring)).geom AS geom
-    FROM route_lines
-    WHERE route_code = ${routeCode}
-  ) AS dumped_points,
-  LATERAL (ARRAY[ST_Y(geom), ST_X(geom)]) AS point`
-  const firstResult = results.at(0)
-
-  console.log(firstResult?.linestring)
-}
-
 if (import.meta.main) {
   addBusLineString();
-  // getBusLineString('133P')
 }
