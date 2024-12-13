@@ -2,8 +2,6 @@ import { sleep } from "bun";
 import { sql } from "./db";
 import { getRouteString } from "./requests/getRouteString";
 
-// check for line swith one way only. eg
-// KM41
 export const addBusRouteLineStrings = async () => {
   const linesRoutes =
     await sql`SELECT * FROM routes WHERE route_code LIKE '%_D0' AND route_code NOT IN (SELECT route_code FROM route_paths)`;
