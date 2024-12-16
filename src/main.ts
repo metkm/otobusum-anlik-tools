@@ -1,12 +1,43 @@
 import "dotenv/config";
-import { addLines } from "./addLines";
-import { addLineStops } from "./addLineStops";
-import { getCredentials } from "./requests/getCredentials";
-import { addLineRoutes } from "./addLineRoutes";
-import { addBusRouteLineStrings } from "./addBusRouteLineStrings";
+import prompts from "prompts";
+import { cityOptions, CityValues } from "./cityOptions";
 
-console.log('gettings credentials')
-await getCredentials()
+import { addLineStops } from "./old/addLineStops";
+import { getCredentials } from "./old/requests/getCredentials";
+import { addLineRoutes } from "./old/addLineRoutes";
+import { addBusRouteLineStrings } from "./old/addBusRouteLineStrings";
+
+interface Choices {
+  title: string;
+  value: CityValues;
+}
+
+const citySelection = await prompts({
+  type: "select",
+  name: "city",
+  message: "Select city",
+  choices: [
+    {
+      title: "Istanbul",
+      value: "istanbul",
+    },
+    {
+      title: "Izmir",
+      value: "izmir",
+    },
+  ] as Choices[],
+});
+
+const city = citySelection.city as CityValues;
+const options = cityOptions[city];
+
+await options.prepare();
+await options.addLines();
+
+// console.log(city)
+
+// console.log('gettings credentials')
+// await getCredentials()
 
 // console.log('addings lines')
 // await addLines()
@@ -17,5 +48,5 @@ await getCredentials()
 // console.log('adding line stops')
 // await addLineStops()
 
-console.log('adding bus lines')
-await addBusRouteLineStrings()
+// console.log('adding bus lines')
+// await addBusRouteLineStrings()

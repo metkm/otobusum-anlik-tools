@@ -1,4 +1,4 @@
-export interface Line {
+export interface DatabaseLine {
   code: string;
   title: string;
 }
