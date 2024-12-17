@@ -19,21 +19,21 @@ export const groupedByKey = <T>(data: T[], key: keyof T) => {
   let result = {} as Record<keyof T, T[]>;
 
   for (let index = 0; index < data.length; index++) {
-    const item = data[index]
-    const keyValue = item[key]
+    const item = data[index];
+    const keyValue = item[key];
 
     // @ts-ignore
     if (result[keyValue]) {
-    // @ts-ignore
-      result[keyValue].push(item)
+      // @ts-ignore
+      result[keyValue].push(item);
     } else {
-    // @ts-ignore
-      result[keyValue] = [item]
+      // @ts-ignore
+      result[keyValue] = [item];
     }
   }
 
-  return result
-}
+  return result;
+};
 
 export const addLinesIstanbul = async () => {
   const linesInDb = await sql`Select code FROM lines`;
@@ -44,29 +44,29 @@ export const addLinesIzmir = async () => {
   const linesInDb = await sql`Select code FROM lines WHERE city = 'izmir'`;
   logger.info(`Got ${linesInDb.count} lines from database`);
 
-  const linesInDbSet = new Set(linesInDb.map(line => line.code))
+  const linesInDbSet = new Set(linesInDb.map((line) => line.code));
 
   const content = await readFile(`${DATA_FOLDER}/izmir/${LINES_FILE}`, {
     encoding: "utf-8",
   });
 
-  const lines: RawLine[] = parse(content, csvOptions);
+  const lines: RawLine[] = parse(content, csvOptions)
+    .filter((line: RawLine) => !linesInDbSet.has(line.HAT_NO.toString()));
 
   const linesTransformed: DatabaseLine[] = lines
-    .filter(line => linesInDbSet.has(line.HAT_NO))
-    .map(line => ({
+    .map((line) => ({
       code: line.HAT_NO.toString(),
       title: line.HAT_ADI,
-      city: 'izmir'
-    }))
+      city: "izmir",
+    }));
 
   if (linesTransformed.length < 1) {
-    logger.warn('No lines to add. Stopping')
-    return
+    logger.warn("No lines to add. Stopping");
+    return;
   }
 
   logger.info(`Adding ${linesTransformed.length} lines to the database`);
-  await sql`INSERT INTO lines ${sql(linesTransformed)}`
+  await sql`INSERT INTO lines ${sql(linesTransformed)}`;
 
   // Creating line routes
   logger.info("Creating default routes for every line");
@@ -79,7 +79,7 @@ export const addLinesIzmir = async () => {
           route_long_name: `${line.HAT_BASLANGIC} - ${line.HAT_BITIS}`,
           route_type: 3,
           route_code: `${line.HAT_NO}_G_D0`,
-          city: 'izmir',
+          city: "izmir",
         },
         {
           agency_id: 1,
@@ -87,7 +87,7 @@ export const addLinesIzmir = async () => {
           route_long_name: `${line.HAT_BITIS} - ${line.HAT_BASLANGIC}`,
           route_type: 3,
           route_code: `${line.HAT_NO}_D_D0`,
-          city: 'izmir',
+          city: "izmir",
         },
       ];
     })
@@ -102,47 +102,50 @@ export const addLinesIzmir = async () => {
 
   const routePaths: RawLineRoute[] = parse(routePathContent, csvOptions);
 
-  const grouped = groupedByKey(routePaths, 'HAT_NO');
-  const paths = lines.map(line => {
-    const paths = grouped[line.HAT_NO] as RawLineRoute[] // 1 G, 2 D
-    
-    const gRoutes: PathCoordinate[] = []
-    const dRoutes: PathCoordinate[] = []
+  const grouped = groupedByKey(routePaths, "HAT_NO");
+  const paths = lines
+    .map((line) => {
+      const paths = grouped[line.HAT_NO] as RawLineRoute[]; // 1 G, 2 D
 
-    for (let index = 0; index < paths.length; index++) {
-      const element = paths[index];
-      const formed = {
-        lat: element.ENLEM,
-        lng: element.BOYLAM
+      const gRoutes: PathCoordinate[] = [];
+      const dRoutes: PathCoordinate[] = [];
+
+      for (let index = 0; index < paths.length; index++) {
+        const element = paths[index];
+        const formed = {
+          lat: element.ENLEM,
+          lng: element.BOYLAM,
+        };
+
+        if (element.YON === 1) {
+          gRoutes.push(formed);
+        } else if (element.YON === 2) {
+          dRoutes.push(formed);
+        }
       }
 
-      if (element.YON === 1) {
-        gRoutes.push(formed)
-      } else if (element.YON === 2) {
-        dRoutes.push(formed)
-      }
-    }
-
-    return [
-      {
-        route_code: `${line.HAT_NO}_G_D0`,
-        route_path: gRoutes,
-        city: 'izmir',
-      },
-      {
-        route_code: `${line.HAT_NO}_D_D0`,
-        route_path: dRoutes,
-        city: 'izmir',
-      }
-    ]
-  })
-    .flat()
+      return [
+        {
+          route_code: `${line.HAT_NO}_G_D0`,
+          route_path: gRoutes,
+          city: "izmir",
+        },
+        {
+          route_code: `${line.HAT_NO}_D_D0`,
+          route_path: dRoutes,
+          city: "izmir",
+        },
+      ];
+    })
+    .flat();
 
   logger.info(`Got ${paths.length} route paths to insert database`);
 
   // @ts-expect-error
   const results = await sql`INSERT INTO route_paths ${sql(paths)}`;
-  logger.info(`Inserted ${results.count} route paths to the database`)
+  logger.info(`Inserted ${results.count} route paths to the database`);
+
+  logger.info("izmir end");
 };
 
 // export const addLines = async () => {
