@@ -3,7 +3,7 @@ import { sql, logger } from "./db";
 import { parse, Options } from "csv-parse/sync";
 
 import { RawLine, RawLineRoute } from "./types/izmir/line";
-import { PathCoordinate, RoutePath } from "./types/database";
+import { PathCoordinate } from "./types/database";
 
 import { DATA_FOLDER, LINE_ROUTE_PATHS, LINES_FILE } from "./constants";
 import { DatabaseLine } from "./types/line";
@@ -41,18 +41,29 @@ export const addLinesIstanbul = async () => {
 };
 
 export const addLinesIzmir = async () => {
-  const linesInDb = await sql`Select code FROM lines`;
+  const linesInDb = await sql`Select code FROM lines WHERE city = 'izmir'`;
   logger.info(`Got ${linesInDb.count} lines from database`);
+
+  const linesInDbSet = new Set(linesInDb.map(line => line.code))
 
   const content = await readFile(`${DATA_FOLDER}/izmir/${LINES_FILE}`, {
     encoding: "utf-8",
   });
 
   const lines: RawLine[] = parse(content, csvOptions);
-  const linesTransformed: DatabaseLine[] = lines.map(line => ({
-    code: line.HAT_NO.toString(),
-    title: line.HAT_ADI
-  }))
+
+  const linesTransformed: DatabaseLine[] = lines
+    .filter(line => linesInDbSet.has(line.HAT_NO))
+    .map(line => ({
+      code: line.HAT_NO.toString(),
+      title: line.HAT_ADI,
+      city: 'izmir'
+    }))
+
+  if (linesTransformed.length < 1) {
+    logger.warn('No lines to add. Stopping')
+    return
+  }
 
   logger.info(`Adding ${linesTransformed.length} lines to the database`);
   await sql`INSERT INTO lines ${sql(linesTransformed)}`
@@ -68,6 +79,7 @@ export const addLinesIzmir = async () => {
           route_long_name: `${line.HAT_BASLANGIC} - ${line.HAT_BITIS}`,
           route_type: 3,
           route_code: `${line.HAT_NO}_G_D0`,
+          city: 'izmir',
         },
         {
           agency_id: 1,
@@ -75,6 +87,7 @@ export const addLinesIzmir = async () => {
           route_long_name: `${line.HAT_BITIS} - ${line.HAT_BASLANGIC}`,
           route_type: 3,
           route_code: `${line.HAT_NO}_D_D0`,
+          city: 'izmir',
         },
       ];
     })
@@ -114,10 +127,12 @@ export const addLinesIzmir = async () => {
       {
         route_code: `${line.HAT_NO}_G_D0`,
         route_path: gRoutes,
+        city: 'izmir',
       },
       {
         route_code: `${line.HAT_NO}_D_D0`,
         route_path: dRoutes,
+        city: 'izmir',
       }
     ]
   })
