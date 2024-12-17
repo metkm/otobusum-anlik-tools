@@ -1,53 +1,133 @@
-import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 import { sql, logger } from "./db";
-import CsvReader from "csv-reader";
-import { RawLine } from "./types/izmir/line";
+import { parse, Options } from "csv-parse/sync";
+
+import { RawLine, RawLineRoute } from "./types/izmir/line";
+import { PathCoordinate, RoutePath } from "./types/database";
+
+import { DATA_FOLDER, LINE_ROUTE_PATHS, LINES_FILE } from "./constants";
 import { DatabaseLine } from "./types/line";
-import { DATA_FOLDER, LINES_FILE, ROUTES_FILE } from "./constants";
+
+const csvOptions: Options = {
+  trim: true,
+  cast: true,
+  delimiter: ";",
+  columns: true,
+};
+
+export const groupedByKey = <T>(data: T[], key: keyof T) => {
+  let result = {} as Record<keyof T, T[]>;
+
+  for (let index = 0; index < data.length; index++) {
+    const item = data[index]
+    const keyValue = item[key]
+
+    // @ts-ignore
+    if (result[keyValue]) {
+    // @ts-ignore
+      result[keyValue].push(item)
+    } else {
+    // @ts-ignore
+      result[keyValue] = [item]
+    }
+  }
+
+  return result
+}
 
 export const addLinesIstanbul = async () => {
   const linesInDb = await sql`Select code FROM lines`;
-  logger.info(`Got ${linesInDb.count} lines from database.`);
+  logger.info(`Got ${linesInDb.count} lines from database`);
 };
 
 export const addLinesIzmir = async () => {
   const linesInDb = await sql`Select code FROM lines`;
-  logger.info(`Got ${linesInDb.count} lines from database.`);
+  logger.info(`Got ${linesInDb.count} lines from database`);
 
-  const lineCodesInDbSet = new Set(linesInDb.map(x => x.code))
-
-  const csvReaderOptions = {
-    asObject: true,
-    trim: true,
-    parseBooleans: true,
-    parseNumbers: true,
-    delimiter: ";",
-  }
-
-  const readableStream = createReadStream(`./data/izmir/${LINES_FILE}`, "utf-8");
-  const csvReader = new CsvReader(csvReaderOptions);
-
-  const lines: DatabaseLine[] = [];
-
-  readableStream.pipe(csvReader).on("data", (row: RawLine) => {
-    if (lineCodesInDbSet.has(row.HAT_NO)) return
-    
-    lines.push({
-      code: row.HAT_NO.toString(),
-      title: row.HAT_ADI,
-    });
+  const content = await readFile(`${DATA_FOLDER}/izmir/${LINES_FILE}`, {
+    encoding: "utf-8",
   });
 
-  logger.info(`Adding ${lines.length} lines to database.`);
-  // await sql`INSERT INTO lines ${sql(lines)}`
+  const lines: RawLine[] = parse(content, csvOptions);
+  const linesTransformed: DatabaseLine[] = lines.map(line => ({
+    code: line.HAT_NO.toString(),
+    title: line.HAT_ADI
+  }))
 
-  // Line Routes
-  const routesReadableStream = createReadStream(`${DATA_FOLDER}/izmir/${ROUTES_FILE}`, "utf-8")
-  const routesReader = new CsvReader(csvReaderOptions)
+  logger.info(`Adding ${linesTransformed.length} lines to the database`);
+  await sql`INSERT INTO lines ${sql(linesTransformed)}`
 
-  routesReadableStream.pipe(routesReader).on("data", (row: RawLine) => {
+  // Creating line routes
+  logger.info("Creating default routes for every line");
+  const defaultRoutes = lines
+    .map((line) => {
+      return [
+        {
+          agency_id: 1,
+          route_short_name: line.HAT_NO,
+          route_long_name: `${line.HAT_BASLANGIC} - ${line.HAT_BITIS}`,
+          route_type: 3,
+          route_code: `${line.HAT_NO}_G_D0`,
+        },
+        {
+          agency_id: 1,
+          route_short_name: line.HAT_NO,
+          route_long_name: `${line.HAT_BITIS} - ${line.HAT_BASLANGIC}`,
+          route_type: 3,
+          route_code: `${line.HAT_NO}_D_D0`,
+        },
+      ];
+    })
+    .flat();
+
+  logger.info(`Adding ${defaultRoutes.length} routes`);
+  await sql`INSERT INTO routes ${sql(defaultRoutes)}`;
+
+  const routePathContent = await readFile(`${DATA_FOLDER}/izmir/${LINE_ROUTE_PATHS}`, {
+    encoding: "utf-8",
+  });
+
+  const routePaths: RawLineRoute[] = parse(routePathContent, csvOptions);
+
+  const grouped = groupedByKey(routePaths, 'HAT_NO');
+  const paths = lines.map(line => {
+    const paths = grouped[line.HAT_NO] as RawLineRoute[] // 1 G, 2 D
     
+    const gRoutes: PathCoordinate[] = []
+    const dRoutes: PathCoordinate[] = []
+
+    for (let index = 0; index < paths.length; index++) {
+      const element = paths[index];
+      const formed = {
+        lat: element.ENLEM,
+        lng: element.BOYLAM
+      }
+
+      if (element.YON === 1) {
+        gRoutes.push(formed)
+      } else if (element.YON === 2) {
+        dRoutes.push(formed)
+      }
+    }
+
+    return [
+      {
+        route_code: `${line.HAT_NO}_G_D0`,
+        route_path: gRoutes,
+      },
+      {
+        route_code: `${line.HAT_NO}_D_D0`,
+        route_path: dRoutes,
+      }
+    ]
   })
+    .flat()
+
+  logger.info(`Got ${paths.length} route paths to insert database`);
+
+  // @ts-expect-error
+  const results = await sql`INSERT INTO route_paths ${sql(paths)}`;
+  logger.info(`Inserted ${results.count} route paths to the database`)
 };
 
 // export const addLines = async () => {

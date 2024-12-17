@@ -5,7 +5,7 @@ import ky from "ky";
 
 import { logger } from "./db";
 import { CityValues } from "./cityOptions";
-import { DATA_FOLDER, LINES_FILE, ROUTES_FILE } from "./constants";
+import { DATA_FOLDER, LINES_FILE, LINE_ROUTE_PATHS } from "./constants";
 
 interface File {
   url: string;
@@ -20,7 +20,7 @@ const filesToDownload: Record<CityValues, File[]> = {
       url: "https://openfiles.izmir.bel.tr/211488/docs/eshot-otobus-hatlari.csv",
     },
     {
-      title: ROUTES_FILE,
+      title: LINE_ROUTE_PATHS,
       url: "https://openfiles.izmir.bel.tr/211488/docs/eshot-otobus-hat-guzergahlari.csv",
     },
   ],
@@ -36,7 +36,7 @@ const prepareFiles = async (targetCity: CityValues) => {
   }
 
   const files = filesToDownload[targetCity].filter((file) => {
-    const fileExists = existsSync(`${targetCityFolder}/${file.title}.csv`);
+    const fileExists = existsSync(`${targetCityFolder}/${file.title}`);
     if (fileExists) {
       logger.info(`${file.title}.csv exists. Skipping`);
     }
@@ -64,7 +64,7 @@ const prepareFiles = async (targetCity: CityValues) => {
     const bytes = await response.bytes();
 
     try {
-      await writeFile(`${targetCityFolder}/${file.title}.csv`, bytes);
+      await writeFile(`${targetCityFolder}/${file.title}`, bytes);
     } catch (error) {
       logger.error(`Error writing data file ${error.message}`);
     }
