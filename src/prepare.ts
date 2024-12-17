@@ -5,7 +5,7 @@ import ky from "ky";
 
 import { logger } from "./db";
 import { CityValues } from "./cityOptions";
-import { DATA_FOLDER, LINES_FILE, LINE_ROUTE_PATHS } from "./constants";
+import { DATA_FOLDER, LINES_FILE, LINE_ROUTE_PATHS_FILE, STOPS_FILE } from "./constants";
 
 interface File {
   url: string;
@@ -20,9 +20,13 @@ const filesToDownload: Record<CityValues, File[]> = {
       url: "https://openfiles.izmir.bel.tr/211488/docs/eshot-otobus-hatlari.csv",
     },
     {
-      title: LINE_ROUTE_PATHS,
+      title: LINE_ROUTE_PATHS_FILE,
       url: "https://openfiles.izmir.bel.tr/211488/docs/eshot-otobus-hat-guzergahlari.csv",
     },
+    {
+      title: STOPS_FILE,
+      url: "https://openfiles.izmir.bel.tr/211488/docs/eshot-otobus-duraklari.csv"
+    }
   ],
 };
 

@@ -32,7 +32,8 @@ const city = citySelection.city as CityValues;
 const options = cityOptions[city];
 
 await options.prepare();
-await options.addLines();
+// await options.addLines();
+await options.addStops();
 
 // console.log(city)
 

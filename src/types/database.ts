@@ -1,4 +1,4 @@
-export interface Route {
+export interface DatabaseRoute {
   id?: number
   agency_id: number
   route_short_name: string
@@ -13,7 +13,14 @@ export interface PathCoordinate {
   lng: number
 }
 
-export interface RoutePath {
-  route_code: string
-  route_path: PathCoordinate[]
+export interface DatabaseStop {
+  stop_code: number
+  stop_name: string
+  x_coord: number
+  y_coord: number
+  smart?: string
+  physical?: string
+  stop_type?: string
+  disabled_can_use?: string
+  city: string
 }

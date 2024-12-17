@@ -1,19 +1,13 @@
 import { readFile } from "fs/promises";
-import { sql, logger } from "./db";
-import { parse, Options } from "csv-parse/sync";
+import { parse } from "csv-parse/sync";
 
 import { RawLine, RawLineRoute } from "./types/izmir/line";
 import { PathCoordinate } from "./types/database";
 
-import { DATA_FOLDER, LINE_ROUTE_PATHS, LINES_FILE } from "./constants";
+import { csvOptions } from "./cityOptions"
+import { sql, logger } from "./db";
+import { DATA_FOLDER, LINE_ROUTE_PATHS_FILE, LINES_FILE } from "./constants";
 import { DatabaseLine } from "./types/line";
-
-const csvOptions: Options = {
-  trim: true,
-  cast: true,
-  delimiter: ";",
-  columns: true,
-};
 
 export const groupedByKey = <T>(data: T[], key: keyof T) => {
   let result = {} as Record<keyof T, T[]>;
@@ -96,7 +90,7 @@ export const addLinesIzmir = async () => {
   logger.info(`Adding ${defaultRoutes.length} routes`);
   await sql`INSERT INTO routes ${sql(defaultRoutes)}`;
 
-  const routePathContent = await readFile(`${DATA_FOLDER}/izmir/${LINE_ROUTE_PATHS}`, {
+  const routePathContent = await readFile(`${DATA_FOLDER}/izmir/${LINE_ROUTE_PATHS_FILE}`, {
     encoding: "utf-8",
   });
 
