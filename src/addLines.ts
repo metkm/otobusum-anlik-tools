@@ -1,37 +1,92 @@
 import { readFile } from "fs/promises";
 import { parse } from "csv-parse/sync";
+import osmtogeojson from "osmtogeojson";
 
+import { IstanbulRawLineRoute } from "./types/istanbul/routes";
 import { RawLine, RawLineRoute } from "./types/izmir/line";
 import { PathCoordinate } from "./types/database";
 
-import { csvOptions } from "./cityOptions"
+import { csvOptions } from "./options";
 import { sql, logger } from "./db";
-import { DATA_FOLDER, LINE_ROUTE_PATHS_FILE, LINES_FILE } from "./constants";
+import {
+  DATA_FOLDER,
+  LINE_ROUTE_PATHS_FILE,
+  LINE_ROUTES_FILE,
+  LINES_FILE,
+  LINES_GEOJSON_FILE,
+} from "./constants";
 import { DatabaseLine } from "./types/line";
-
-export const groupedByKey = <T>(data: T[], key: keyof T) => {
-  let result = {} as Record<keyof T, T[]>;
-
-  for (let index = 0; index < data.length; index++) {
-    const item = data[index];
-    const keyValue = item[key];
-
-    // @ts-ignore
-    if (result[keyValue]) {
-      // @ts-ignore
-      result[keyValue].push(item);
-    } else {
-      // @ts-ignore
-      result[keyValue] = [item];
-    }
-  }
-
-  return result;
-};
+import { groupedByKey } from "./utils";
+import { Element, GeoJson } from "./types/geojson";
 
 export const addLinesIstanbul = async () => {
-  const linesInDb = await sql`Select code FROM lines`;
-  logger.info(`Got ${linesInDb.count} lines from database`);
+  // const linesInDb = await sql`Select code FROM lines`;
+  // logger.info(`got ${linesInDb.count} lines from database`);
+
+  logger.info("reading & parsing routes file");
+  const routesContent = await readFile(`${DATA_FOLDER}/istanbul/${LINE_ROUTES_FILE}`, {
+    encoding: "utf-8",
+  });
+
+  const clearedLines = routesContent
+    .split("\r\n")
+    .map((line) => {
+      if (line.startsWith(`"`)) {
+        let cleanLine = line.slice(1, -2);
+        cleanLine = cleanLine.replaceAll(`""`, `"`);
+
+        return cleanLine;
+      }
+
+      return line;
+    })
+    .join("\r\n");
+
+  const routes: IstanbulRawLineRoute[] = parse(clearedLines, {
+    ...csvOptions,
+    delimiter: ",",
+  });
+  logger.info(`found ${routes.length} routes from ${LINE_ROUTES_FILE}`);
+
+  const linesToInsert: DatabaseLine[] = [];
+  const linesCodesAdded = new Set();
+
+  for (let index = 0; index < routes.length; index++) {
+    const route = routes[index];
+    if (linesCodesAdded.has(route.route_short_name.toString())) continue
+
+    linesToInsert.push({
+      city: "istanbul",
+      code: route.route_short_name,
+      title: route.route_long_name
+    })
+
+    linesCodesAdded.add(route.route_short_name.toString());
+  }
+  logger.info(`found ${linesCodesAdded.size} lines to insert`);
+
+
+  const osmContent = await readFile(`${DATA_FOLDER}/istanbul/${LINES_GEOJSON_FILE}`, { encoding: 'utf-8' });
+  const osmParsed: GeoJson = JSON.parse(osmContent);
+
+  const osmElementsFiltered = osmParsed.elements.filter(
+    el => 
+      el.tags.ref !== undefined
+      && el.tags.operator === "İETT"
+      && !linesCodesAdded.has(el.tags.ref.toString())
+  )
+
+  logger.info(`${osmElementsFiltered.length} osm lines to insert`)
+
+  const elementsToInsert: DatabaseLine[] = osmElementsFiltered.map(el => ({
+    city: "istanbul",
+    code: el.tags.ref,
+    title: el.tags.name,
+  }))
+
+  linesToInsert.push(...elementsToInsert)
+
+  await sql`INSERT INTO lines ${sql(linesToInsert)}`
 };
 
 export const addLinesIzmir = async () => {
@@ -44,15 +99,15 @@ export const addLinesIzmir = async () => {
     encoding: "utf-8",
   });
 
-  const lines: RawLine[] = parse(content, csvOptions)
-    .filter((line: RawLine) => !linesInDbSet.has(line.HAT_NO.toString()));
+  const lines: RawLine[] = parse(content, csvOptions).filter(
+    (line: RawLine) => !linesInDbSet.has(line.HAT_NO.toString())
+  );
 
-  const linesTransformed: DatabaseLine[] = lines
-    .map((line) => ({
-      code: line.HAT_NO.toString(),
-      title: line.HAT_ADI,
-      city: "izmir",
-    }));
+  const linesTransformed: DatabaseLine[] = lines.map((line) => ({
+    code: line.HAT_NO.toString(),
+    title: line.HAT_ADI,
+    city: "izmir",
+  }));
 
   if (linesTransformed.length < 1) {
     logger.warn("No lines to add. Stopping");

@@ -3,7 +3,7 @@ import { parse } from "csv-parse/sync";
 
 import { RawStop } from "./types/izmir/stop";
 import { DATA_FOLDER, STOPS_FILE } from "./constants";
-import { csvOptions } from "./cityOptions";
+import { csvOptions } from "./options";
 import { logger, sql } from "./db";
 import { DatabaseStop } from "./types/database";
 
@@ -25,5 +25,6 @@ export const addStopsIzmir = async () => {
     city: 'izmir',
   }))
 
-  await sql`INSERT INTO stops ${sql(stopsTransformed)}`;
+  const stops = await sql`INSERT INTO stops ${sql(stopsTransformed)} ON CONFLICT DO NOTHING`;
+  logger.info(`Added ${stops.count} stops`)
 };

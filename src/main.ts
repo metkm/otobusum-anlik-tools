@@ -1,6 +1,6 @@
 import "dotenv/config";
 import prompts from "prompts";
-import { cityOptions, CityValues } from "./cityOptions";
+import { cityOptions, CityValues } from "./options";
 
 import { addLineStops } from "./old/addLineStops";
 import { getCredentials } from "./old/requests/getCredentials";
@@ -32,22 +32,5 @@ const city = citySelection.city as CityValues;
 const options = cityOptions[city];
 
 await options.prepare();
-// await options.addLines();
-await options.addStops();
-
-// console.log(city)
-
-// console.log('gettings credentials')
-// await getCredentials()
-
-// console.log('addings lines')
-// await addLines()
-
-// console.log('adding line routes')
-// await addLineRoutes()
-
-// console.log('adding line stops')
-// await addLineStops()
-
-// console.log('adding bus lines')
-// await addBusRouteLineStrings()
+await options.addLines();
+// await options.addStops();
